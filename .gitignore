@@ -1,0 +1,30 @@
+# Python cache files
+__pycache__/
+*.pyc
+
+# Environment variables
+.env
+venv
+
+# Pyrogram session files
+*.session
+*.session-journal
+userbot.session
+
+# Log files
+bot.log
+
+# Local development files
+*.bak
+*.swp
+
+# IDE and editor files
+.vscode/
+.idea/
+.idx
+
+# macOS system files
+.DS_Store
+
+# Silence MP3 (optional, if you don't want to commit it)
+# silence.mp3
