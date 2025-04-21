@@ -28,7 +28,7 @@ async def main():
         # Register handlers with bot and streamer
         play_handler.register(bot, streamer)
         radio_handler.register(bot, streamer)
-        inline_handler.register(bot)
+        inline_handler.register(bot, streamer)
 
         # Start bot and userbot
         await bot.start()

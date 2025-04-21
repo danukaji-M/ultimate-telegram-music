@@ -16,6 +16,7 @@ class Streamer:
             self.client = client
             self.tgcalls = PyTgCalls(client)
             self.active_streams = {}  # {chat_id: {"stream": url, "paused": bool, "queue": [urls]}}
+            self._is_tgcalls_running = False  # Track PyTgCalls state
         except Exception as e:
             logger.error(f"Failed to initialize Streamer: {e}")
             raise
@@ -38,9 +39,15 @@ class Streamer:
             raise ValueError("Invalid chat_id: must be a negative integer")
 
         try:
-            await self.tgcalls.start()
+            # Start PyTgCalls only if not already running
+            if not self._is_tgcalls_running:
+                await self.tgcalls.start()
+                self._is_tgcalls_running = True
+                logger.info("Started PyTgCalls client")
+            
             if not os.path.exists("silence.mp3"):
                 raise FileNotFoundError("silence.mp3 not found in project root")
+            
             await self.tgcalls.join_group_call(
                 chat_id,
                 "silence.mp3"  # Direct file path for initial silent stream

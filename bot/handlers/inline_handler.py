@@ -3,8 +3,9 @@ from pyrogram.types import InlineQuery, InlineQueryResultArticle, InputTextMessa
 from bot.utils.yt_streamer import get_youtube_stream, get_playlist_streams
 from bot.utils.radio_browser import get_sri_lankan_radios
 from config.logging import logger
+from userbot.streamer import Streamer
 
-def register(app: Client):
+def register(app: Client, streamer: Streamer = None):
     """Register inline query handlers."""
     
     @app.on_inline_query()
@@ -21,11 +22,11 @@ def register(app: Client):
             results = []
 
             # Search YouTube for songs
-            stream_url = await get_youtube_stream(search_query, audio_only=True)
-            if stream_url:
+            stream_data = await get_youtube_stream(search_query, audio_only=True)
+            if stream_data and stream_data.get('url'):
                 results.append(
                     InlineQueryResultArticle(
-                        title=f"Song: {search_query}",
+                        title=f"Song: {stream_data.get('title', search_query)}",
                         input_message_content=InputTextMessageContent(f"/play {search_query}"),
                         description="Play this song in voice chat",
                         thumb_url="https://i.imgur.com/0B3zV.png"
@@ -33,13 +34,13 @@ def register(app: Client):
                 )
 
             # Search YouTube for playlists
-            playlist_urls = await get_playlist_streams(search_query)
-            if playlist_urls:
+            playlist_streams = await get_playlist_streams(search_query)
+            if playlist_streams:
                 results.append(
                     InlineQueryResultArticle(
                         title=f"Playlist: {search_query}",
                         input_message_content=InputTextMessageContent(f"/playlist {search_query}"),
-                        description=f"Play this playlist ({len(playlist_urls)} tracks)",
+                        description=f"Play this playlist ({len(playlist_streams)} tracks)",
                         thumb_url="https://i.imgur.com/0B3zV.png"
                     )
                 )

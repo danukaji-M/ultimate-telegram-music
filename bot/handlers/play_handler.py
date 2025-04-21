@@ -10,19 +10,23 @@ def register(app: Client, streamer: Streamer):
     
     @app.on_message(filters.command("play") & filters.group)
     async def play_command(client: Client, message: Message):
-        """Handle /play command to stream audio in a group voice chat."""
+        """Handle /play command to stream audio from a YouTube search or URL."""
         query = " ".join(message.command[1:])
         if not query:
-            await message.reply("Please provide a song name or YouTube link!")
+            await message.reply("Please provide a song name or YouTube link: /play <song_name_or_url>")
             return
 
         try:
             logger.info(f"Processing /play for query: {query} in chat {message.chat.id}")
             # Get stream URL (audio only)
-            stream_url = await get_youtube_stream(query, audio_only=True)
-            if not stream_url:
-                await message.reply("Could not find the song!")
+            stream_data = await get_youtube_stream(query, audio_only=True)
+            if not stream_data or not stream_data.get('url'):
+                await message.reply("Could not find the song on YouTube!")
+                logger.warning(f"No stream found for query: {query}")
                 return
+
+            stream_url = stream_data['url']
+            title = stream_data.get('title', query)
 
             # Check if in voice chat
             if not await streamer.is_in_vc(message.chat.id):
@@ -31,27 +35,31 @@ def register(app: Client, streamer: Streamer):
 
             # Start streaming
             await streamer.start_stream(stream_url, message.chat.id)
-            await message.reply(f"🎵 Now playing: {query}")
-            logger.info(f"Started streaming {query} in chat {message.chat.id}")
+            await message.reply(f"🎵 Now playing: **{title}**")
+            logger.info(f"Started streaming {title} in chat {message.chat.id}")
         except Exception as e:
             logger.error(f"Error in /play for chat {message.chat.id}: {e}")
             await message.reply(f"Error playing song: {str(e)}")
 
     @app.on_message(filters.command("vplay") & filters.group)
     async def vplay_command(client: Client, message: Message):
-        """Handle /vplay command to stream video in a group voice chat."""
+        """Handle /vplay command to stream video from a YouTube search or URL."""
         query = " ".join(message.command[1:])
         if not query:
-            await message.reply("Please provide a video name or YouTube link!")
+            await message.reply("Please provide a video name or YouTube link: /vplay <video_name_or_url>")
             return
 
         try:
             logger.info(f"Processing /vplay for query: {query} in chat {message.chat.id}")
             # Get stream URL (video + audio)
-            stream_url = await get_youtube_stream(query, audio_only=False)
-            if not stream_url:
-                await message.reply("Could not find the video!")
+            stream_data = await get_youtube_stream(query, audio_only=False)
+            if not stream_data or not stream_data.get('url'):
+                await message.reply("Could not find the video on YouTube!")
+                logger.warning(f"No stream found for query: {query}")
                 return
+
+            stream_url = stream_data['url']
+            title = stream_data.get('title', query)
 
             # Check if in voice chat
             if not await streamer.is_in_vc(message.chat.id):
@@ -60,8 +68,8 @@ def register(app: Client, streamer: Streamer):
 
             # Start streaming
             await streamer.start_stream(stream_url, message.chat.id)
-            await message.reply(f"🎥 Now playing video: {query}")
-            logger.info(f"Started streaming video {query} in chat {message.chat.id}")
+            await message.reply(f"🎥 Now playing video: **{title}**")
+            logger.info(f"Started streaming video {title} in chat {message.chat.id}")
         except Exception as e:
             logger.error(f"Error in /vplay for chat {message.chat.id}: {e}")
             await message.reply(f"Error playing video: {str(e)}")
@@ -71,15 +79,16 @@ def register(app: Client, streamer: Streamer):
         """Handle /playlist command to stream a YouTube playlist."""
         query = " ".join(message.command[1:])
         if not query:
-            await message.reply("Please provide a playlist name or YouTube playlist link!")
+            await message.reply("Please provide a playlist name or YouTube playlist link: /playlist <playlist_name_or_url>")
             return
 
         try:
             logger.info(f"Processing /playlist for query: {query} in chat {message.chat.id}")
             # Get playlist stream URLs
-            playlist_urls = await get_playlist_streams(query)
-            if not playlist_urls:
-                await message.reply("Could not find the playlist!")
+            playlist_streams = await get_playlist_streams(query)
+            if not playlist_streams:
+                await message.reply("Could not find the playlist on YouTube!")
+                logger.warning(f"No playlist found for query: {query}")
                 return
 
             # Check if in voice chat
@@ -88,6 +97,7 @@ def register(app: Client, streamer: Streamer):
                 logger.info(f"Joined voice chat for chat {message.chat.id}")
 
             # Add playlist to queue and start streaming
+            playlist_urls = [stream['url'] for stream in playlist_streams]
             await streamer.add_to_queue(playlist_urls, message.chat.id)
             await streamer.start_stream(playlist_urls[0], message.chat.id)
             await message.reply(f"🎶 Started playing playlist: {query} ({len(playlist_urls)} tracks)")
